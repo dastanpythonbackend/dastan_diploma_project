@@ -10,7 +10,7 @@ class Resume(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
     analyzed = models.BooleanField(default=False)
     title = models.CharField(max_length=255, blank=True, null=True)  # Заголовок/название резюме
-    description = models.TextField(blank=True, null=True)  # Описание или краткий обзор резюме
+    description = models.JSONField(blank=True, null=True)  # Описание или краткий обзор резюме
 
 
 class ResumeAnalysis(models.Model):
