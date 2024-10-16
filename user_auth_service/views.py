@@ -8,5 +8,3 @@ from .serializers import UserSerializer
 class ProfileView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-
-
