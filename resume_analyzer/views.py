@@ -14,7 +14,7 @@ from rest_framework import permissions, generics
 class ResumeCreateAPIView(CreateAPIView):
     queryset = Resume.objects.all()
     serializer_class = ResumeSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -22,7 +22,7 @@ class ResumeCreateAPIView(CreateAPIView):
     def analyze_resume(self, resume):
         print("analyze_resume")
         headers = {
-            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZTg0Y2JiMTktMTgwMC00YmQyLWIzMmYtODAzNDU5OTBhNjY5IiwidHlwZSI6ImFwaV90b2tlbiJ9.41xKzG_GopHPulGmJBThBXz7DjonTiZK9iLS194uMo0"  # Замените на ваш токен
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiOTRiMDQ0NTktZjQ1MS00OTY4LTlhM2UtYjhiNmI4ZTJhMDcwIiwidHlwZSI6ImFwaV90b2tlbiJ9.ukZ22dwwefVnF0zisTPYjCadMSSv7tGc983GrVTNWyw"  # Замените на ваш токен
         }
         url = "https://api.edenai.run/v2/ocr/resume_parser"
         json_payload = {
