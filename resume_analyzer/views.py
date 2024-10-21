@@ -1,4 +1,5 @@
 import requests
+from django.shortcuts import get_object_or_404
 from requests import Response
 from rest_framework.exceptions import NotAuthenticated
 from rest_framework.generics import CreateAPIView
@@ -8,6 +9,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import Resume, ResumeAnalysis
 from .serializers import ResumeSerializer, ResumeAnalysisSerializer
 from rest_framework import permissions, generics
+from django.http import JsonResponse
 
 # Create your views here.
 
@@ -15,7 +17,7 @@ from rest_framework import permissions, generics
 class ResumeCreateAPIView(CreateAPIView):
     queryset = Resume.objects.all()
     serializer_class = ResumeSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     def perform_create(self, serializer):
 
@@ -66,6 +68,47 @@ class ResumeListView(APIView):
         return Response(data={"message": "Анализ заверщен!"})
 
 
-class ResumeAnalysisAPIView(CreateAPIView):
+class ResumeAnalysisAPIView(APIView):
     queryset = ResumeAnalysis.objects.all()
     serializer_class = ResumeAnalysisSerializer
+
+
+class ResumeAnalyzer:
+    def __init__(self, resume_id):
+        # Инициализация объекта Resume по ID
+        self.resume = get_object_or_404(Resume, id=resume_id)
+        self.json_data = self.resume.description  # Извлечение JSON-данных из поля description
+
+    def extract_and_save_analysis(self):
+
+        extracted_data = self.json_data.get("openai", {}).get("extracted_data", {})
+        personal_info = extracted_data.get("personal_infos", {})
+        education_info = extracted_data.get("education", {})
+        work_experience = extracted_data.get("work_experience", {})
+
+        # Сохранение данных в модель ResumeAnalysis
+        ResumeAnalysis.objects.update_or_create(
+            resume=self.resume,
+            defaults={
+                "name": personal_info.get("name", {}).get("raw_name"),
+                "email": personal_info.get("mails", [None])[0],
+                "phone": personal_info.get("phones", [None])[0],
+                "education": str(education_info),
+                "experience": str(work_experience),
+                "skills": ", ".join([skill.get("name") for skill in extracted_data.get("skills", [])]),
+                "certifications": str(extracted_data.get("certifications", [])),
+                "recommendations": extracted_data.get("recommendations", "")
+            }
+        )
+
+        self.resume.analyzed = True
+        self.resume.save()
+
+        return {"status": "успех", "message": "реюме обработанно"}
+
+
+def analyze_resume_view(request, resume_id):
+    analyzer = ResumeAnalyzer(resume_id)
+    result = analyzer.extract_and_save_analysis()
+
+    return JsonResponse(result)
