@@ -189,6 +189,8 @@ class ResumeAnalyzer:
 def analyze_resume_view(request, resume_id):
     analyzer = ResumeAnalyzer(resume_id)
     result = analyzer.extract_and_save_analysis()
+
+    # Вызов методов анализа
     ai_content_detection = analyzer.ai_content_detection()
     emotion_detection = analyzer.emotion_detection()
     pii_and_anonymization = analyzer.pii_and_anonymization()
