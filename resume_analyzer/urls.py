@@ -1,9 +1,19 @@
 from django.urls import path
-from .views import ResumeCreateAPIView, ResumeListAPIView, ResumeDetailView, analyze_resume_view
+from . import views
 
 urlpatterns = [
-    path('', ResumeCreateAPIView.as_view()),
-    path('resume_list/', ResumeListAPIView.as_view()),
-    path('resume_detail/', ResumeDetailView.as_view()),
-    path('analyze_resume/<int:resume_id>/', analyze_resume_view, name='analyze_resume'),
+    # Эндпоинт для создания резюме
+
+    path('resumes/create/', views.ResumeCreateAPIView.as_view(), name='resume-create'),
+
+    # Эндпоинт для списка всех резюме
+
+    path('resumes/', views.ResumeListAPIView.as_view(), name='resume-list'),
+
+    # Эндпоинт для просмотра деталей анализа резюме
+
+    path('resumes/<int:pk>/', views.ResumeDetailView.as_view(), name='resume-detail'),
+
+    # Эндпоинт для запуска анализа по определенному ID резюме
+    path('resumes/<int:resume_id>/analyze/', views.ResumeAnalysisAPIView.as_view(), name='resume-analyze'),
 ]

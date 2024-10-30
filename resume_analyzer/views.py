@@ -1,13 +1,14 @@
 import requests
+import json
 from django.shortcuts import get_object_or_404
+from rest_framework import permissions, generics
 from rest_framework.exceptions import NotAuthenticated
 from rest_framework.generics import CreateAPIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.views import APIView
 from .models import Resume, ResumeAnalysis
 from .serializers import ResumeSerializer, ResumeAnalysisSerializer
-from rest_framework import permissions, generics
-import json
-
-# Create your views here.
 
 
 class ResumeCreateAPIView(CreateAPIView):
@@ -60,149 +61,101 @@ class ResumeDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
 
-class ResumeAnalyzer:
-    def __init__(self, resume_id):
-        # Инициализация объекта Resume по ID
-        self.resume = get_object_or_404(Resume, id=resume_id)
-        self.json_data = self._get_json_data()
+class ResumeAnalysisAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
-    def _get_json_data(self):
-        if self.resume.description:
-            try:
-                return json.loads(self.resume.description)
-            except json.JSONDecodeError:
-                return {}
-        return {}
+    def post(self, request, resume_id):
+        resume = get_object_or_404(Resume, id=resume_id)
 
-    def extract_and_save_analysis(self):
-        extracted_data = self.json_data.get("openai", {}).get("extracted_data", {})
-        print("extracted_data", extracted_data)
-        personal_info = extracted_data.get("personal_info", {})
-        print("personal_info", personal_info)
-        education_info = extracted_data.get("education", {})
-        work_experience = extracted_data.get("work_experience", {})
+        # Извлечение данных из JSON, который находится в поле description
+        description_data = resume.description
+        if not description_data:
+            return Response({"error": "Description data is empty"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Сохранение данных в модель ResumeAnalysis
-        analysis, _ = ResumeAnalysis.objects.update_or_create(
-            resume=self.resume,
+        # Пример извлечения нужного текста для анализа
+        try:
+            extracted_data = description_data.get("openai", {}).get("extracted_data", {})
+            personal_info = extracted_data.get("personal_infos", {})
+            text_for_analysis = f"{personal_info.get('self_summary', '')} {personal_info.get('objective', '')}"
+            if not text_for_analysis.strip():
+                text_for_analysis = " ".join([entry.get("description", "") for entry in
+                                              extracted_data.get("work_experience", {}).get("entries", [])])
+        except Exception as e:
+            return Response({"error": f"Failed to extract text for analysis: {str(e)}"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Выполнение анализа с использованием извлеченного текста
+        headers = {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiOTRiMDQ0NTktZjQ1MS00OTY4LTlhM2UtYjhiNmI4ZTJhMDcwIiwidHlwZSI6ImFwaV90b2tlbiJ9.ukZ22dwwefVnF0zisTPYjCadMSSv7tGc983GrVTNWyw"
+        }
+
+        ai_content_detection = self.ai_content_detection(text_for_analysis, headers)
+        emotion_detection = self.emotion_detection(text_for_analysis, headers)
+        pii_and_anonymization = self.pii_and_anonymization(text_for_analysis, headers)
+        sentiment_analysis = self.sentiment_analysis(text_for_analysis, headers)
+
+        # Сохранение результатов анализа в базу данных
+        analysis, created = ResumeAnalysis.objects.update_or_create(
+            resume=resume,
             defaults={
                 "name": personal_info.get("name", {}).get("raw_name"),
                 "email": personal_info.get("mails", [None])[0],
                 "phone": personal_info.get("phones", [None])[0],
-                "education": str(education_info),
-                "experience": str(work_experience),
-                "skills": ", ".join([skill.get("name") for skill in extracted_data.get("skills", [])]),
-                "certifications": str(extracted_data.get("certifications", [])),
-                "recommendations": extracted_data.get("recommendations", "")
+                "education": json.dumps(extracted_data.get("education", {})),
+                "experience": json.dumps(extracted_data.get("work_experience", {})),
+                "skills": ", ".join([skill.get("name", "") for skill in extracted_data.get("skills", [])]),
+                "certifications": json.dumps(extracted_data.get("certifications", [])),
+                "ai_content_detection": json.dumps(ai_content_detection),
+                "emotion_detection": json.dumps(emotion_detection),
+                "pii_and_anonymization": json.dumps(pii_and_anonymization),
+                "sentiment_analysis": json.dumps(sentiment_analysis)
             }
         )
 
-        self.resume.analyzed = True
-        self.resume.save()
-        print("analysis", analysis)
-        return analysis
+        return Response({
+            "message": "Analysis saved successfully",
+            "analysis_data": {
+                "ai_content_detection": ai_content_detection,
+                "emotion_detection": emotion_detection,
+                "pii_and_anonymization": pii_and_anonymization,
+                "sentiment_analysis": sentiment_analysis
+            }
+        }, status=status.HTTP_200_OK)
 
-    def ai_content_detection(self, text):
-        headers = {
-            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiOTRiMDQ0NTktZjQ1MS00OTY4LTlhM2UtYjhiNmI4ZTJhMDcwIiwidHlwZSI6ImFwaV90b2tlbiJ9.ukZ22dwwefVnF0zisTPYjCadMSSv7tGc983GrVTNWyw", "Content-Type": "application/json"}
-
+    def ai_content_detection(self, text, headers):
         url = "https://api.edenai.run/v2/text/ai_detection"
         payload = {
             "providers": "originalityai",
-            "text": text,
+            "text": text
         }
-
         response = requests.post(url, json=payload, headers=headers)
+        return response.json() if response.status_code == 200 else {"error": response.text}
 
-        return response.json()
-
-    def emotion_detection(self, text):
-        headers = {
-            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiOTRiMDQ0NTktZjQ1MS00OTY4LTlhM2UtYjhiNmI4ZTJhMDcwIiwidHlwZSI6ImFwaV90b2tlbiJ9.ukZ22dwwefVnF0zisTPYjCadMSSv7tGc983GrVTNWyw", "Content-Type": "application/json"}
-
+    def emotion_detection(self, text, headers):
         url = "https://api.edenai.run/v2/text/emotion_detection"
         payload = {
             "providers": "nlpcloud,vernai",
-            "text": text,
+            "text": text
         }
-
         response = requests.post(url, json=payload, headers=headers)
+        return response.json() if response.status_code == 200 else {"error": response.text}
 
-        return response.json()
-
-    def pii_and_anonymization(self, text):
-        headers = {
-            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiOTRiMDQ0NTktZjQ1MS00OTY4LTlhM2UtYjhiNmI4ZTJhMDcwIiwidHlwZSI6ImFwaV90b2tlbiJ9.ukZ22dwwefVnF0zisTPYjCadMSSv7tGc983GrVTNWyw", "Content-Type": "application/json"}
-
+    def pii_and_anonymization(self, text, headers):
         url = "https://api.edenai.run/v2/text/anonymization"
         payload = {
             "providers": "emvista",
             "language": "en",
-            "text": text,
+            "text": text
         }
-
         response = requests.post(url, json=payload, headers=headers)
+        return response.json() if response.status_code == 200 else {"error": response.text}
 
-        return response.json()
-
-    def question_answer(self):
-        headers = {
-            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiOTRiMDQ0NTktZjQ1MS00OTY4LTlhM2UtYjhiNmI4ZTJhMDcwIiwidHlwZSI6ImFwaV90b2tlbiJ9.ukZ22dwwefVnF0zisTPYjCadMSSv7tGc983GrVTNWyw", "Content-Type": "application/json"}
-
-        url = "https://api.edenai.run/v2/image/question_answer"
-        json_payload = {
-            "providers": "alephalpha",
-            "file_url": "🔗 URL of your image",
-            "question": "What are the logos on the image ?",
-        }
-
-        response = requests.post(url, json=json_payload, headers=headers)
-
-        return response.json()
-
-    def sentiment_analysis(self, text):
-        headers = {
-            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiOTRiMDQ0NTktZjQ1MS00OTY4LTlhM2UtYjhiNmI4ZTJhMDcwIiwidHlwZSI6ImFwaV90b2tlbiJ9.ukZ22dwwefVnF0zisTPYjCadMSSv7tGc983GrVTNWyw", "Content-Type": "application/json"}
-
+    def sentiment_analysis(self, text, headers):
         url = "https://api.edenai.run/v2/text/sentiment_analysis"
         payload = {
             "providers": "google,amazon",
             "language": "en",
-            "text": text,
+            "text": text
         }
-
         response = requests.post(url, json=payload, headers=headers)
-
-        return response.json()
-
-
-def analyze_resume_view(request, resume):
-    try:
-        analyzer = ResumeAnalyzer(resume.id)
-
-        analysis = analyzer.extract_and_save_analysis()
-        text_to_analyze = analysis.education
-
-        # Выполняем анализ текста с помощью различных методов
-        ai_content_detection = analyzer.ai_content_detection(text_to_analyze)
-        emotion_detection = analyzer.emotion_detection(text_to_analyze)
-        pii_and_anonymization = analyzer.pii_and_anonymization(text_to_analyze)
-        sentiment_analysis = analyzer.sentiment_analysis(text_to_analyze)
-
-        # Сохраняем результаты анализа в JSON-формате
-        analysis.ai_content_detection = json.dumps(ai_content_detection)
-        analysis.emotion_detection = json.dumps(emotion_detection)
-        analysis.pii_and_anonymization = json.dumps(pii_and_anonymization)
-        analysis.question_answer = json.dumps(question_answer)
-        analysis.sentiment_analysis = json.dumps(sentiment_analysis)
-
-        # Сохраняем изменения в базе данных
-        analysis.save()
-
-        # Отмечаем резюме как проанализированное
-        resume.analyzed = True
-        resume.save()
-
-        print("Resume analyzed and saved succesfully.")
-    except Exception as e:
-        print(f"Exception while analyzing resume: {e}")
+        return response.json() if response.status_code == 200 else {"error": response.text}
