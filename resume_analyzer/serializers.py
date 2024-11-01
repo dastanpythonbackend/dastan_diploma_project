@@ -22,4 +22,5 @@ class ResumeAnalysisSerializer(serializers.ModelSerializer):
     class Meta:
         model = ResumeAnalysis
         fields = ['resume', 'name', 'email', 'phone', 'education', 'experience', 'skills',
-                  'certifications', 'recommendations', 'created_at']
+                  'certifications', 'recommendations', 'created_at', 'ai_content_detection', 'emotion_detection',
+                  'pii_and_anonymization', 'sentiment_analysis']

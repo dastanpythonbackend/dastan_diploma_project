@@ -1,11 +1,10 @@
 import requests
 import json
 from django.shortcuts import get_object_or_404
-from rest_framework import permissions, generics
+from rest_framework import permissions, generics, status
 from rest_framework.exceptions import NotAuthenticated
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
-from rest_framework import status
 from rest_framework.views import APIView
 from .models import Resume, ResumeAnalysis
 from .serializers import ResumeSerializer, ResumeAnalysisSerializer
@@ -101,14 +100,14 @@ class ResumeAnalysisAPIView(APIView):
                 "name": personal_info.get("name", {}).get("raw_name"),
                 "email": personal_info.get("mails", [None])[0],
                 "phone": personal_info.get("phones", [None])[0],
-                "education": json.dumps(extracted_data.get("education", {})),
-                "experience": json.dumps(extracted_data.get("work_experience", {})),
+                "education": json.dumps(extracted_data.get("education", {}), ensure_ascii=False),
+                "experience": json.dumps(extracted_data.get("work_experience", {}), ensure_ascii=False),
                 "skills": ", ".join([skill.get("name", "") for skill in extracted_data.get("skills", [])]),
-                "certifications": json.dumps(extracted_data.get("certifications", [])),
-                "ai_content_detection": json.dumps(ai_content_detection),
-                "emotion_detection": json.dumps(emotion_detection),
-                "pii_and_anonymization": json.dumps(pii_and_anonymization),
-                "sentiment_analysis": json.dumps(sentiment_analysis)
+                "certifications": json.dumps(extracted_data.get("certifications", []), ensure_ascii=False),
+                "ai_content_detection": json.dumps(ai_content_detection, ensure_ascii=False),
+                "emotion_detection": json.dumps(emotion_detection, ensure_ascii=False),
+                "pii_and_anonymization": json.dumps(pii_and_anonymization, ensure_ascii=False),
+                "sentiment_analysis": json.dumps(sentiment_analysis, ensure_ascii=False)
             }
         )
 

@@ -24,3 +24,7 @@ class ResumeAnalysis(models.Model):
     certifications = models.TextField(blank=True, null=True)  # Сертификаты и достижения
     recommendations = models.TextField(blank=True, null=True)  # Рекомендации на основе анализа
     created_at = models.DateTimeField(auto_now_add=True)
+    ai_content_detection = models.TextField(blank=True, null=True)
+    emotion_detection = models.TextField(blank=True, null=True)
+    pii_and_anonymization = models.TextField(blank=True, null=True)
+    sentiment_analysis = models.TextField(blank=True, null=True)
