@@ -16,4 +16,7 @@ urlpatterns = [
 
     # Эндпоинт для запуска анализа по определенному ID резюме
     path('resumes/<int:resume_id>/analyze/', views.ResumeAnalysisAPIView.as_view(), name='resume-analyze'),
+
+    # Эндпоинт для получения нужных данных
+    path('resumes/<int:resume_id>/filtered_resume/', views.FilteredResumeListView.as_view(), name='filtered_resume'),
 ]

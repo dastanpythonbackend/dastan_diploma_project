@@ -51,13 +51,13 @@ class ResumeCreateAPIView(CreateAPIView):
 class ResumeListAPIView(generics.ListAPIView):
     queryset = Resume.objects.all()
     serializer_class = ResumeSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
 
 class ResumeDetailView(generics.RetrieveAPIView):
     queryset = ResumeAnalysis.objects.all()
     serializer_class = ResumeAnalysisSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
 
 class ResumeAnalysisAPIView(APIView):
@@ -158,3 +158,25 @@ class ResumeAnalysisAPIView(APIView):
         }
         response = requests.post(url, json=payload, headers=headers)
         return response.json() if response.status_code == 200 else {"error": response.text}
+
+
+class FilteredResumeListView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, resume_id):
+        resume_analysis = get_object_or_404(ResumeAnalysis, resume_id=resume_id)
+        response_data = {
+            "name": resume_analysis.name,
+            "email": resume_analysis.email,
+            "phone": resume_analysis.phone,
+            "education": json.loads(resume_analysis.education),
+            "experience": json.loads(resume_analysis.experience),
+            "skills": resume_analysis.skills,
+            "certifications": resume_analysis.certifications,
+            "recommendations": resume_analysis.recommendations,
+            "ai_content_detection": json.loads(resume_analysis.ai_content_detection),
+            "emotion_detection": json.loads(resume_analysis.emotion_detection),
+            "pii_and_anonymization": json.loads(resume_analysis.pii_and_anonymization),
+            "sentiment_analysis": json.loads(resume_analysis.sentiment_analysis),
+        }
+        return Response(response_data)
