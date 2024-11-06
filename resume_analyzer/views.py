@@ -2,7 +2,7 @@ import requests
 import json
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, generics, status
-from rest_framework.exceptions import NotAuthenticated
+from rest_framework.exceptions import NotAuthenticated, NotFound
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -61,7 +61,7 @@ class ResumeDetailView(generics.RetrieveAPIView):
 
 
 class ResumeAnalysisAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request, resume_id):
         resume = get_object_or_404(Resume, id=resume_id)
@@ -179,4 +179,35 @@ class FilteredResumeListView(APIView):
             "pii_and_anonymization": json.loads(resume_analysis.pii_and_anonymization),
             "sentiment_analysis": json.loads(resume_analysis.sentiment_analysis),
         }
+
+        # Фильтрируем поля, удаляя те, которые равны None, пустым строкам или пустым объектам
+        response_data = self.clean_data(response_data)
+
+        # Преобразуем JSON-строки в объекты, если они существуют
+        for field in ["education", "experience", "ai_content_detection", "emotion_detection", "pii_and_anonymization",
+                      "sentiment_analysis"]:
+            if field in response_data and isinstance(response_data[field], str):
+                try:
+                    response_data[field] = json.loads(response_data[field])
+                except json.JSONDecodeError:
+                    pass  # В случае ошибки пропускаем преобразование
+
         return Response(response_data)
+
+    def clean_data(self, data):
+        """
+        Рекурсия очистка данных от null, пустых строк и пустых объектов/списков.
+        """
+        if isinstance(data, dict):
+            # Проходим по всем ключам и удаляем поля с None, пустыми строками или пустыми объектами
+            return {
+                key: self.clean_data(value)
+                for key, value in data.items()
+                if value not in [None, "", {}, []]
+                # Удаляем поля с None, пустыми строками, пустыми объектами и списками
+            }
+        elif isinstance(data, list):
+            # Для списков удаляем пустые элементы
+            return [self.clean_data(item) for item in data if item not in [None, "", {}, []]]
+        else:
+            return data
