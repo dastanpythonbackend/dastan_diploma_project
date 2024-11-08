@@ -1,60 +1,55 @@
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from .models import ResumeAnalysis, Recommendation
 import openai
-from rest_framework import status, permissions
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from .models import Recommendation
-from .serializers import RecommendationSerializers
-from resume_analyzer.models import ResumeAnalysis
 
-openai.api_key = ''
+# Установите ваш API ключ
+openai.api_key = ()
 
 
-class ResumeRecommendationAPIView(APIView):
-    permission_classes = [permissions.AllowAny]
+def analyze_resume_view(request, resume_id):
+    # Получаем резюме из базы данных
+    resume_analysis = get_object_or_404(ResumeAnalysis, id=resume_id)
 
-    def post(self, request, resume_id):
-        try:
-            # Получаем анализ резюме по ID
-            resume_analysis = ResumeAnalysis.objects.get(analysis=resume_id)
+    # Формируем описание резюме
+    resume_description = (
+        f"Name: {resume_analysis.name}\n"
+        f"Email: {resume_analysis.email}\n"
+        f"Phone: {resume_analysis.phone}\n"
+        f"Education: {resume_analysis.education}\n"
+        f"Experience: {resume_analysis.experience}\n"
+        f"Skills: {resume_analysis.skills}\n"
+        f"Certifications: {resume_analysis.certifications}"
+    )
 
-            # Извлекаем данные для анализа
-            extracted_data = resume_analysis.extracted_data
+    # Формируем текстовый запрос на русском языке для анализа и улучшения резюме
+    prompt = f"Это резюме с следующими деталями: {resume_description}. " \
+             "Дайте обратную связь по возможным улучшениям и предложите, как сделать его более впечатляющим."
 
-            # Генерация рекомендаций
-            recommendations_text = self.generate_recommendations(extracted_data)
+    # Отправляем запрос к GPT API
+    response = openai.ChatCompletion.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "Вы эксперт по карьерному развитию, специализирующийся на улучшении резюме."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=255
+    )
 
-            # Создаем объект Recommendation
-            recommendation = Recommendation.objects.create(
-                resume=resume_analysis.resume,
-                recommendations_text=recommendations_text
-            )
+    # Получаем результат анализа
+    feedback = response['choices'][0]['message']['content'].strip()
 
-            # Сериализуем результат
-            serializer = RecommendationSerializers(recommendation)
+    # Сохраняем рекомендации в базе данных
+    recommendation = Recommendation.objects.create(
+        resume=resume_analysis,
+        recommended_jobs="Пример предложенных вакансий...",
+        improvement_tips=feedback,
+        career_suggestions="Советы по развитию карьеры..."
+    )
 
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        except ResumeAnalysis.DoesNotExist:
-            return Response({"error": "Resume analysis not found."}, status=status.HTTP_404_NOT_FOUND)
-
-    def generate_recommendations(self, extracted_data):
-        skills = ", ".join([skill.get("name", "") for skill in extracted_data.get("skills", [])])
-        experience = " ".join(
-            [entry.get("description", "") for entry in extracted_data.get("work_experience", {}).get("entries", [])])
-
-        prompt = f"""
-        Based on the skills: {skills} and experience: {experience}, generate recommendations for career growth, job opportunities, and skills to focus on.
-        """
-
-        try:
-            # Используем OpenAI API для генерации рекомендаций
-            response = openai.Completion.create(
-                model="gpt-4o",
-                engine="text-davinci-003",  # Выберите нужную модель
-                prompt=prompt,
-                max_tokens=255
-            )
-
-            return response.choices[0].text.strip()
-        except Exception as e:
-            return f"Error generating recommendations: {str(e)}"
+    # Возвращаем JSON-ответ
+    return JsonResponse({
+        "status": "success",
+        "feedback": feedback,
+        "recommendation_id": recommendation.id
+    })
