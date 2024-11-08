@@ -28,3 +28,4 @@ class ResumeAnalysis(models.Model):
     emotion_detection = models.TextField(blank=True, null=True)
     pii_and_anonymization = models.TextField(blank=True, null=True)
     sentiment_analysis = models.TextField(blank=True, null=True)
+    extracted_data = models.JSONField(null=True, blank=True)
