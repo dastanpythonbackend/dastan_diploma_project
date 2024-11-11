@@ -15,6 +15,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['username', 'email', 'password', 'profile']
+        ref_name = 'UserAuthServiceUserSerializer'  # Уникальное имя для этого сериализатора
 
     def create(self, validated_data):
         profile_data = validated_data.pop('profile')
