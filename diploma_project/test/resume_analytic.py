@@ -1,10 +1,10 @@
 import requests
 
-resume_id = 11
+resume_id = 12
 
-url = f"http://127.0.0.1:8000/resumes/resumes/{resume_id}/analyze/"
+url = f"http://127.0.0.1:8000/resumes/resume_analyze/{resume_id}/"
 
-token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzMwODk5Njk1LCJpYXQiOjE3MzA4OTYwOTUsImp0aSI6IjVlOWYzNDE5MzE2YjQ5Mjk5YThiNGVhZWQxYjFmMDBmIiwidXNlcl9pZCI6MX0._9wYTxOJJueGEtUJ_4oEYWJWcYApVu8Ai5Xai23K5Ns"
+token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzMxMzMxMDQ3LCJpYXQiOjE3MzEzMjc0NDcsImp0aSI6IjQ3OTViZDEyMzM3YTRjNzQ4Mzc3NDZmOTZiMDMxMDEzIiwidXNlcl9pZCI6MX0.eSdwGjajB5xpyZVpt6vaFNoAIp52BDNQWcPcUisRU1o"
 
 headers = {
     "Authorization": f"Bearer {token}"

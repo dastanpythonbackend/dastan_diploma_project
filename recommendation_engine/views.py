@@ -5,7 +5,8 @@ import openai
 import re
 
 # API ключ
-openai.api_key = ()
+openai.api_key = ("sk-proj-Go-5lekPoZ0ALnO870Xt0bWWtNpLTjj9w-JhnJkuZRy-u27njsBzTrarI-2w7IAzxzKuPDU5bDT3BlbkFJIvpuCtea__"
+                  "dbPyCU-0enLwQ-gEPRLSbjZh7v6gSyGvB02r9BOmQkJSj_1mF24ouSaTlqfxKyoA")
 
 
 def analyze_resume_view(request, resume_id):
@@ -26,7 +27,8 @@ def analyze_resume_view(request, resume_id):
     # Формируем текстовый запрос на русском языке для анализа и улучшения резюме
     prompt = f"Это резюме с следующими деталями: {resume_description}. " \
              "Дайте обратную связь по возможным улучшениям и предложите, как сделать его более впечатляющим." \
-             "Также порекомендуйте несколько примеров вакансий, которые могут подойти для кандитата с такими навыками," \
+             "Также порекомендуйте несколько примеров вакансий, которые могут подойти для кандитата с такими навыками,"\
+             \
              "и предложите советы по развитию карьеры для начинающего специалиста."
 
     # Отправляем запрос к GPT API
@@ -48,7 +50,8 @@ def analyze_resume_view(request, resume_id):
     career_suggestions = ""
 
     # Извлекаем "Рекомендации по улучшению резюме"
-    match_feedback = re.search(r"### Рекомендации по улучшению резюме:(.*?)(### Примеры вакансий:|### Советы по развитию карьеры:|$)", feedback, re.DOTALL)
+    match_feedback = re.search(r"### Рекомендации по улучшению резюме:(.*?)(### Примеры вакансий:|### Советы по"
+                               r" развитию карьеры:|$)", feedback, re.DOTALL)
     if match_feedback:
         improvement_tips = match_feedback.group(1).strip()
 

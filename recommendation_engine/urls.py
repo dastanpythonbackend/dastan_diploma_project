@@ -19,6 +19,6 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-    path('analyze-resume/<int:resume_id>/', views.analyze_resume_view, name='analyze_resume'),
+    path('analyze_resume/<int:resume_id>/', views.analyze_resume_view, name='analyze_resume'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='swagger-ui'),  # Swagger UI для recommendation_engine
 ]

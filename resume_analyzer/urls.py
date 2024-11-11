@@ -1,4 +1,3 @@
-# resume_analyzer/urls.py
 from django.urls import path
 from rest_framework import permissions
 from . import views
@@ -18,6 +17,8 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-    path('create/', views.ResumeCreateAPIView.as_view(), name='resume-create'),
+    path('resume_create/', views.ResumeCreateAPIView.as_view(), name='resume_create'),
+    path('resume_analyze/<int:resume_id>/', views.ResumeAnalysisAPIView.as_view(), name='resume_analyze'),
+    path('filtered_resume/<int:resume_id>/', views.FilteredResumeListView.as_view(), name='filtered_resume'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='swagger-ui'),  # Swagger UI для resume_analyzer
 ]

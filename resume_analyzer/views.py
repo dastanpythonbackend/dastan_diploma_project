@@ -10,19 +10,28 @@ from .models import Resume, ResumeAnalysis
 from .serializers import ResumeSerializer, ResumeAnalysisSerializer
 
 
+# Представление для создания резюме
 class ResumeCreateAPIView(CreateAPIView):
-    queryset = Resume.objects.all()
-    serializer_class = ResumeSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    queryset = Resume.objects.all()  # Все резюме в базе данных
+    serializer_class = ResumeSerializer  # Используемый сериализатор для валидации данных
+    permission_classes = [permissions.IsAuthenticated]  # Только для аутентифицированных пользователей
 
     def perform_create(self, serializer):
+        # Метод для выполнения создания резюме
+        # Если пользователь не аутентифицирован, выбрасываем исключение
         if self.request.user.is_anonymous:
-            raise NotAuthenticated("User must be authenticated to upload a resume.")
+            raise NotAuthenticated("Пользователь должен быть аутентифицирован, чтобы загрузить резюме.")
+
+        # Сохраняем резюме и начиная его анализ
         resume = serializer.save(user=self.request.user)
         self.analyze_resume(resume)
 
     def analyze_resume(self, resume):
-        print("analyze_resume started")
+        """
+         Метод для анализа загруженного резюме с использованием внешнего API.
+         Загружает резюме и отправляет его в API для анализа.
+        """
+        print("Началя анализ резюме.")
         headers = {
             "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiOTRiMDQ0NTktZjQ1MS00OTY4LTlhM2UtYjhiNmI4ZTJhMDcwIiwidHlwZSI6ImFwaV90b2tlbiJ9.ukZ22dwwefVnF0zisTPYjCadMSSv7tGc983GrVTNWyw"
         }
@@ -121,6 +130,7 @@ class ResumeAnalysisAPIView(APIView):
             }
         }, status=status.HTTP_200_OK)
 
+    # Метод обнаружения контента с помощью ИИ
     def ai_content_detection(self, text, headers):
         url = "https://api.edenai.run/v2/text/ai_detection"
         payload = {
@@ -130,6 +140,7 @@ class ResumeAnalysisAPIView(APIView):
         response = requests.post(url, json=payload, headers=headers)
         return response.json() if response.status_code == 200 else {"error": response.text}
 
+    # Метод распознавания эмоций
     def emotion_detection(self, text, headers):
         url = "https://api.edenai.run/v2/text/emotion_detection"
         payload = {
@@ -139,6 +150,7 @@ class ResumeAnalysisAPIView(APIView):
         response = requests.post(url, json=payload, headers=headers)
         return response.json() if response.status_code == 200 else {"error": response.text}
 
+    # Метод персональных данных и анонимизация
     def pii_and_anonymization(self, text, headers):
         url = "https://api.edenai.run/v2/text/anonymization"
         payload = {
@@ -149,6 +161,7 @@ class ResumeAnalysisAPIView(APIView):
         response = requests.post(url, json=payload, headers=headers)
         return response.json() if response.status_code == 200 else {"error": response.text}
 
+    # Метод анализа настроений
     def sentiment_analysis(self, text, headers):
         url = "https://api.edenai.run/v2/text/sentiment_analysis"
         payload = {
