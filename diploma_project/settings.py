@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-ul&7-4y&a($!^8w!ayotlf@)luf$010*d5u#%c4^g^d*$8%1lc
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -37,6 +37,13 @@ INSTALLED_APPS = [
     'recommendation_engine',
     'rest_framework',
     'drf_yasg',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'rest_framework.authtoken',
+    'dj_rest_auth',
+    'dj_rest_auth.registration',
     'rest_framework_simplejwt',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -46,9 +53,39 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 ]
 
+SITE_ID = 1
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'METHOD': 'oauth2',
+        'VERIFIED_EMAIL': True,
+        'CLIENT_ID': '845299489119-2iiuuld66b225m5kdpf5vd043bn66emm.apps.googleusercontent.com',
+        'SECRET': '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',
+    }
+}
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://d1f6-31-192-250-119.ngrok-free.app",
+]
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOWED_ORIGINS = [
+    "https://4ad8-31-192-250-119.ngrok-free.app",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -56,6 +93,7 @@ REST_FRAMEWORK = {
 }
 
 MIDDLEWARE = [
+    'allauth.account.middleware.AccountMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

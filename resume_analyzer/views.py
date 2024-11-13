@@ -14,16 +14,20 @@ from .serializers import ResumeSerializer, ResumeAnalysisSerializer
 class ResumeCreateAPIView(CreateAPIView):
     queryset = Resume.objects.all()  # Все резюме в базе данных
     serializer_class = ResumeSerializer  # Используемый сериализатор для валидации данных
-    permission_classes = [permissions.IsAuthenticated]  # Только для аутентифицированных пользователей
+    permission_classes = [permissions.AllowAny]  # Только для аутентифицированных пользователей
 
     def perform_create(self, serializer):
-        # Метод для выполнения создания резюме
-        # Если пользователь не аутентифицирован, выбрасываем исключение
+        """
+        Этот метод вызывается при сохранении нового резюме.
+        Сначала проверяется, аутентифицирован ли пользователь.
+        Если пользователь аутентифицирован, то резюме созхраняется, и выполняется его анализ.
+        """
         if self.request.user.is_anonymous:
             raise NotAuthenticated("Пользователь должен быть аутентифицирован, чтобы загрузить резюме.")
 
-        # Сохраняем резюме и начиная его анализ
+        # Сохраняем резюме, привязываем его к текущему пользователю
         resume = serializer.save(user=self.request.user)
+        # После сохраняем резюме, начиная его анализ
         self.analyze_resume(resume)
 
     def analyze_resume(self, resume):
@@ -47,8 +51,9 @@ class ResumeCreateAPIView(CreateAPIView):
 
             if response.status_code == 200:
                 result = response.json()
+                # Сохраняем результаты анализа в поле description резюме
                 resume.description = result
-                resume.analyzed = True
+                resume.analyzed = True # Помечаем резюме как проанализировать
                 resume.save()
                 print("Resume analyzed and saved successfully.")
             else:
