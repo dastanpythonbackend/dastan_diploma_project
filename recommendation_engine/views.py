@@ -5,8 +5,7 @@ import openai
 import re
 
 # API ключ
-openai.api_key = ("sk-proj-Go-5lekPoZ0ALnO870Xt0bWWtNpLTjj9w-JhnJkuZRy-u27njsBzTrarI-2w7IAzxzKuPDU5bDT3BlbkFJIvpuCtea__"
-                  "dbPyCU-0enLwQ-gEPRLSbjZh7v6gSyGvB02r9BOmQkJSj_1mF24ouSaTlqfxKyoA")
+openai.api_key = ()
 
 
 def analyze_resume_view(request, resume_id):
@@ -50,18 +49,18 @@ def analyze_resume_view(request, resume_id):
     career_suggestions = ""
 
     # Извлекаем "Рекомендации по улучшению резюме"
-    match_feedback = re.search(r"### Рекомендации по улучшению резюме:(.*?)(### Примеры вакансий:|### Советы по"
+    match_feedback = re.search(r"Рекомендации по улучшению резюме:(.*?)(Примеры вакансий:|Советы по"
                                r" развитию карьеры:|$)", feedback, re.DOTALL)
     if match_feedback:
         improvement_tips = match_feedback.group(1).strip()
 
     # Извлекаем "Примеры вакансий"
-    match_jobs = re.search(r"### Примеры вакансий:(.*?)(### Советы по развитию карьеры:|$)", feedback, re.DOTALL)
+    match_jobs = re.search(r"Примеры вакансий:(.*?)(Советы по развитию карьеры:|$)", feedback, re.DOTALL)
     if match_jobs:
         recommended_jobs = match_jobs.group(1).strip()
 
     # Извлекаем "Советы по развитию карьеры"
-    match_career = re.search(r"### Советы по развитию карьеры:(.*)", feedback, re.DOTALL)
+    match_career = re.search(r"Советы по развитию карьеры:(.*)", feedback, re.DOTALL)
     if match_career:
         career_suggestions = match_career.group(1).strip()
 

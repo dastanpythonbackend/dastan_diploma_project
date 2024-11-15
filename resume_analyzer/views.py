@@ -14,7 +14,7 @@ from .serializers import ResumeSerializer, ResumeAnalysisSerializer
 class ResumeCreateAPIView(CreateAPIView):
     queryset = Resume.objects.all()  # Все резюме в базе данных
     serializer_class = ResumeSerializer  # Используемый сериализатор для валидации данных
-    permission_classes = [permissions.AllowAny]  # Только для аутентифицированных пользователей
+    permission_classes = [permissions.IsAuthenticated]  # Только для аутентифицированных пользователей
 
     def perform_create(self, serializer):
         """
@@ -36,54 +36,60 @@ class ResumeCreateAPIView(CreateAPIView):
          Загружает резюме и отправляет его в API для анализа.
         """
         print("Началя анализ резюме.")
+        # Заголовки для авторизации с использованием токена API
         headers = {
             "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiOTRiMDQ0NTktZjQ1MS00OTY4LTlhM2UtYjhiNmI4ZTJhMDcwIiwidHlwZSI6ImFwaV90b2tlbiJ9.ukZ22dwwefVnF0zisTPYjCadMSSv7tGc983GrVTNWyw"
         }
         url = "https://api.edenai.run/v2/ocr/resume_parser"
         json_payload = {
-            "providers": "openai",
+            "providers": "openai",  # Указываем поставщика для обработки резюме
         }
 
         try:
+            # Открываем файл резюме и отправляем его в API для анализа
             with open(resume.file.path, "rb") as f:
                 files = {"file": f}
                 response = requests.post(url, data=json_payload, headers=headers, files=files)
 
+            # Если запрос успешен, сохраняем результаты анализа
             if response.status_code == 200:
                 result = response.json()
-                # Сохраняем результаты анализа в поле description резюме
-                resume.description = result
-                resume.analyzed = True # Помечаем резюме как проанализировать
+                resume.description = result  # Сохраняем результаты анализа в поле description
+                resume.analyzed = True  # Помечаем резюме как проанализированное
                 resume.save()
-                print("Resume analyzed and saved successfully.")
+                print("Резюме успешно проанализировано и сохранено.")
             else:
-                print(f"Error analyzing resume: {response.status_code} - {response.text}")
+                print(f"Ошибка при анализе резюме: {response.status_code} - {response.text}")
         except Exception as e:
-            print(f"Exception while analyzing resume: {e}")
+            print(f"Исключение при анализе резюме: {e}")
 
 
+# Представление для получения списка всех резюме
 class ResumeListAPIView(generics.ListAPIView):
-    queryset = Resume.objects.all()
-    serializer_class = ResumeSerializer
-    permission_classes = [permissions.AllowAny]
+    queryset = Resume.objects.all()  # Получаем все резюме из базы данных
+    serializer_class = ResumeSerializer  # Сериализатор для преобразования в формат JSON
+    permission_classes = [permissions.IsAuthenticated]  # Доступно для всех пользователей
 
 
+# Представление для получения данных об одном резюме
 class ResumeDetailView(generics.RetrieveAPIView):
-    queryset = ResumeAnalysis.objects.all()
-    serializer_class = ResumeAnalysisSerializer
-    permission_classes = [permissions.AllowAny]
+    queryset = ResumeAnalysis.objects.all()  # Получаем данные анализа резюме
+    serializer_class = ResumeAnalysisSerializer  # Сериализатор для отображения данных анализа
+    permission_classes = [permissions.IsAuthenticated]  # Доступно для всех пользователей
 
 
+# Представление для выполнения анализа резюме с использованием внешних API
 class ResumeAnalysisAPIView(APIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]  # Доступно для всех пользователей
 
     def post(self, request, resume_id):
+        # Получаем резюме по ID
         resume = get_object_or_404(Resume, id=resume_id)
 
-        # Извлечение данных из JSON, который находится в поле description
+        # Извлечение данных из поля description, которое содержит результат анализа резюме
         description_data = resume.description
         if not description_data:
-            return Response({"error": "Description data is empty"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Данные описания пусты"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Пример извлечения нужного текста для анализа
         try:
@@ -94,7 +100,7 @@ class ResumeAnalysisAPIView(APIView):
                 text_for_analysis = " ".join([entry.get("description", "") for entry in
                                               extracted_data.get("work_experience", {}).get("entries", [])])
         except Exception as e:
-            return Response({"error": f"Failed to extract text for analysis: {str(e)}"},
+            return Response({"error": f"Не удалось извлечь текст для анализа: {str(e)}"},
                             status=status.HTTP_400_BAD_REQUEST)
 
         # Выполнение анализа с использованием извлеченного текста
@@ -109,7 +115,7 @@ class ResumeAnalysisAPIView(APIView):
 
         # Сохранение результатов анализа в базу данных
         analysis, created = ResumeAnalysis.objects.update_or_create(
-            resume=resume,
+            resume=resume,  # Связываем анализ с конкретным резюме
             defaults={
                 "name": personal_info.get("name", {}).get("raw_name"),
                 "email": personal_info.get("mails", [None])[0],
@@ -126,7 +132,7 @@ class ResumeAnalysisAPIView(APIView):
         )
 
         return Response({
-            "message": "Analysis saved successfully",
+            "message": "Анализ успешно сохранён",
             "analysis_data": {
                 "ai_content_detection": ai_content_detection,
                 "emotion_detection": emotion_detection,
@@ -135,8 +141,10 @@ class ResumeAnalysisAPIView(APIView):
             }
         }, status=status.HTTP_200_OK)
 
-    # Метод обнаружения контента с помощью ИИ
+    # Методы для выполнения различных видов анализа текста
+
     def ai_content_detection(self, text, headers):
+        """Метод для определения оригинальности текста с помощью ИИ"""
         url = "https://api.edenai.run/v2/text/ai_detection"
         payload = {
             "providers": "originalityai",
@@ -145,8 +153,8 @@ class ResumeAnalysisAPIView(APIView):
         response = requests.post(url, json=payload, headers=headers)
         return response.json() if response.status_code == 200 else {"error": response.text}
 
-    # Метод распознавания эмоций
     def emotion_detection(self, text, headers):
+        """Метод для распознавания эмоций в тексте"""
         url = "https://api.edenai.run/v2/text/emotion_detection"
         payload = {
             "providers": "nlpcloud,vernai",
@@ -155,8 +163,8 @@ class ResumeAnalysisAPIView(APIView):
         response = requests.post(url, json=payload, headers=headers)
         return response.json() if response.status_code == 200 else {"error": response.text}
 
-    # Метод персональных данных и анонимизация
     def pii_and_anonymization(self, text, headers):
+        """Метод для анонимизации персональных данных"""
         url = "https://api.edenai.run/v2/text/anonymization"
         payload = {
             "providers": "emvista",
@@ -166,39 +174,53 @@ class ResumeAnalysisAPIView(APIView):
         response = requests.post(url, json=payload, headers=headers)
         return response.json() if response.status_code == 200 else {"error": response.text}
 
-    # Метод анализа настроений
     def sentiment_analysis(self, text, headers):
+        """
+        Метод для выполнения анализа настроений в тексте с использованием внешнего API.
+        Используются провайдеры Google и Amazon для анализа настроений.
+        """
         url = "https://api.edenai.run/v2/text/sentiment_analysis"
         payload = {
-            "providers": "google,amazon",
-            "language": "en",
-            "text": text
+            "providers": "google,amazon",  # Указываем провайдеров для анализа
+            "language": "en",  # Язык текста
+            "text": text  # Текст, который необходимо проанализировать
         }
+        # Отправляем запрос к API
         response = requests.post(url, json=payload, headers=headers)
+
+        # Возвращаем результат в формате JSON, если запрос успешен, или сообщение об ошибке
         return response.json() if response.status_code == 200 else {"error": response.text}
 
 
+# Представление для фильтрации данных анализа резюме
 class FilteredResumeListView(APIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]  # Доступно для всех пользователей
 
     def get(self, request, resume_id):
+        """
+        Метод для получения отфильтрованных данных анализа резюме по его ID.
+        Фильтруются пустые значения, такие как None, пустые строки и пустые объекты/списки.
+        """
+        # Получаем объект анализа резюме по ID
         resume_analysis = get_object_or_404(ResumeAnalysis, resume_id=resume_id)
+
+        # Собираем данные для ответа, включая все необходимые поля из объекта анализа
         response_data = {
             "name": resume_analysis.name,
             "email": resume_analysis.email,
             "phone": resume_analysis.phone,
-            "education": json.loads(resume_analysis.education),
-            "experience": json.loads(resume_analysis.experience),
+            "education": json.loads(resume_analysis.education),  # Преобразуем строку в JSON
+            "experience": json.loads(resume_analysis.experience),   # Преобразуем строку в JSON
             "skills": resume_analysis.skills,
             "certifications": resume_analysis.certifications,
             "recommendations": resume_analysis.recommendations,
-            "ai_content_detection": json.loads(resume_analysis.ai_content_detection),
-            "emotion_detection": json.loads(resume_analysis.emotion_detection),
-            "pii_and_anonymization": json.loads(resume_analysis.pii_and_anonymization),
-            "sentiment_analysis": json.loads(resume_analysis.sentiment_analysis),
+            "ai_content_detection": json.loads(resume_analysis.ai_content_detection),  # Преобразуем строку в JSON
+            "emotion_detection": json.loads(resume_analysis.emotion_detection),  # Преобразуем строку в JSON
+            "pii_and_anonymization": json.loads(resume_analysis.pii_and_anonymization),  # Преобразуем строку в JSON
+            "sentiment_analysis": json.loads(resume_analysis.sentiment_analysis),  # Преобразуем строку в JSON
         }
 
-        # Фильтрируем поля, удаляя те, которые равны None, пустым строкам или пустым объектам
+        # Фильтруем данные, удаляя поля с None, пустыми строками или пустыми объектами
         response_data = self.clean_data(response_data)
 
         # Преобразуем JSON-строки в объекты, если они существуют
@@ -206,26 +228,27 @@ class FilteredResumeListView(APIView):
                       "sentiment_analysis"]:
             if field in response_data and isinstance(response_data[field], str):
                 try:
-                    response_data[field] = json.loads(response_data[field])
+                    response_data[field] = json.loads(response_data[field])  # Преобразуем строку в объект
                 except json.JSONDecodeError:
                     pass  # В случае ошибки пропускаем преобразование
 
+        # Возвращаем отфильтрованные данные
         return Response(response_data)
 
     def clean_data(self, data):
         """
-        Рекурсия очистка данных от null, пустых строк и пустых объектов/списков.
+        Рекурсивная очистка данных от пустых значений, таких как None, пустые строки, пустые объекты и пустые списки.
         """
         if isinstance(data, dict):
-            # Проходим по всем ключам и удаляем поля с None, пустыми строками или пустыми объектами
+            # Для словаря удаляем ключи с None, пустыми строками или пустыми объектами
             return {
-                key: self.clean_data(value)
+                key: self.clean_data(value)  # Рекурсивно очищаем значения
                 for key, value in data.items()
-                if value not in [None, "", {}, []]
-                # Удаляем поля с None, пустыми строками, пустыми объектами и списками
+                if value not in [None, "", {}, []]  # Убираем пустые или пустые объекты
             }
         elif isinstance(data, list):
-            # Для списков удаляем пустые элементы
+            # Для списка удаляем пустые элементы
             return [self.clean_data(item) for item in data if item not in [None, "", {}, []]]
         else:
+            # Для остальных типов данных возвращаем их без изменений
             return data
