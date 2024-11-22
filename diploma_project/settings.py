@@ -77,6 +77,13 @@ MIDDLEWARE = [
 # Настройки для dj-rest-auth
 REST_USE_JWT = True
 
+SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
 # Настройки для Google
 SOCIALACCOUNT_PROVIDERS = {
     'google': {

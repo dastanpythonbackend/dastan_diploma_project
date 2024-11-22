@@ -17,15 +17,15 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-    # Путь для создания нового пользователя (регистрация).
-    path('profile/', views.ProfileView.as_view(), name='profile'),
-
     # Путь для отображения Swagger UI (интерфейс для документации API).
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='swagger_ui'),
 
+    # Путь для создания нового пользователя (регистрация).
+    path('register/', views.ProfileView.as_view(), name='register'),
+
     # Путь для регистрации нового пользователя.
-    path('register/', views.RegisterView.as_view(), name='register'),
+    path('registration_phone_number/', views.RegisterView.as_view(), name='registration_phone_number'),
 
     # Путь для верификации номера телефона через SMS.
-    path('verify-sms/', views.VerifySMSView.as_view(), name='verify-sms'),
+    path('verify_sms/', views.VerifySMSView.as_view(), name='verify_sms'),
 ]

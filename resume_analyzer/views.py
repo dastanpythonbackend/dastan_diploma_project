@@ -68,14 +68,14 @@ class ResumeCreateAPIView(CreateAPIView):
 class ResumeListAPIView(generics.ListAPIView):
     queryset = Resume.objects.all()  # Получаем все резюме из базы данных
     serializer_class = ResumeSerializer  # Сериализатор для преобразования в формат JSON
-    permission_classes = [permissions.IsAuthenticated]  # Доступно для всех пользователей
+    permission_classes = [permissions.AllowAny]  # Доступно для всех пользователей
 
 
 # Представление для получения данных об одном резюме
 class ResumeDetailView(generics.RetrieveAPIView):
     queryset = ResumeAnalysis.objects.all()  # Получаем данные анализа резюме
     serializer_class = ResumeAnalysisSerializer  # Сериализатор для отображения данных анализа
-    permission_classes = [permissions.IsAuthenticated]  # Доступно для всех пользователей
+    permission_classes = [permissions.AllowAny]  # Доступно для всех пользователей
 
 
 # Представление для выполнения анализа резюме с использованием внешних API
@@ -194,7 +194,7 @@ class ResumeAnalysisAPIView(APIView):
 
 # Представление для фильтрации данных анализа резюме
 class FilteredResumeListView(APIView):
-    permission_classes = [permissions.IsAuthenticated]  # Доступно для всех пользователей
+    permission_classes = [permissions.AllowAny]  # Доступно для всех пользователей
 
     def get(self, request, resume_id):
         """

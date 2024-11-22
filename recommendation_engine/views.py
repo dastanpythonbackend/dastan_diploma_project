@@ -2,7 +2,6 @@ from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from .models import ResumeAnalysis, Recommendation
 import openai
-import re
 
 # API ключ
 openai.api_key = ()
@@ -23,55 +22,61 @@ def analyze_resume_view(request, resume_id):
         f"Certifications: {resume_analysis.certifications}"
     )
 
-    # Формируем текстовый запрос на русском языке для анализа и улучшения резюме
-    prompt = f"Это резюме с следующими деталями: {resume_description}. " \
-             "Дайте обратную связь по возможным улучшениям и предложите, как сделать его более впечатляющим." \
-             "Также порекомендуйте вакансии, которые могут подойти для кандитата с такими навыками,"\
-             \
-             "и предложите советы по развитию карьеры для начинающего специалиста."
+    # Формируем текстовый запрос для анализа и улучшения резюме
+    # В этом запросе мы просим систему предоставить обратную связь по резюме
+    # и предложить рекомендации по улучшению его структуры и содержания.
+    resume_analysis_prompt = f"Это резюме с следующими деталями: {resume_description}." \
+                             "Дайте обратную связь по возможным улучшениям и предложите, как сделать его более впечатляющим."
 
-    # Отправляем запрос к GPT API
-    response = openai.ChatCompletion.create(
+    # Формируем запрос для рекомендации вакансий на основе резюме
+    # Этот запрос направлен на то, чтобы получить предложения вакансий, которые могут подходить пользователю
+    # с учетом его опыта и навыков, указанных в резюме.
+    job_recommendation_prompt = f"Это резюме с следующими деталями: {resume_description}." \
+                                "На основе данного резюме, порекомендуйте подходящие вакансии для кандидата."
+
+    # Формируем запрос для получения советов по развитию карьеры
+    # В этом запросе мы просим систему предоставить советы по развитию карьеры для начинающего специалиста,
+    # исходя из информации, представленной в резюме.
+    career_advice_prompt = f"Это резюме с следующими деталями: {resume_description}." \
+                           "Предложите советы по развитию карьеры для кандидата, на основе этого резюме."
+
+    # 1-й запрос: обратная связь по резюме
+    response_feedback = openai.ChatCompletion.create(
         model="gpt-4o",
         messages=[
             {"role": "system", "content": "Вы эксперт по карьерному развитию, специализирующийся на улучшении резюме."},
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": resume_analysis_prompt},
         ],
         max_tokens=1000
     )
 
-    # Получаем результат анализа
-    feedback = response["choices"][0]["message"]["content"].strip()
+    # 2-й запрос: рекомендации по вакансиям
+    response_job = openai.ChatCompletion.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "Вы карьерный консультант и эксперт по подбору вакансий. Ваша задача — подбирать подходящие вакансии на основе опыта, навыков и квалификации кандидатов."},
+            {"role": "user", "content": job_recommendation_prompt},
+        ],
+        max_tokens=1000
+    )
 
-    # Используем регулярные выражения для извлечения разделов
-    improvement_tips = ""
-    recommended_jobs = ""
-    career_suggestions = ""
+    # 3-й запрос: советы по карьере
+    response_career = openai.ChatCompletion.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "Вы карьерный коуч и эксперт по профессиональному развитию. Ваша задача — предлагать рекомендации для карьерного роста, развития навыков и улучшения профессионального профиля."},
+            {"role": "user", "content": career_advice_prompt},
+        ],
+        max_tokens=1000
+    )
 
-    # Извлекаем "Рекомендации по улучшению резюме"
-    match_feedback = re.search(r"Рекомендации по улучшению резюме:(.*?)(Примеры вакансий:|Советы по развитию карьеры:|$)", feedback, re.DOTALL)
-    if match_feedback:
-        improvement_tips = match_feedback.group(1).strip()
+    # Получаем результаты анализа
+    feedback = response_feedback["choices"][0]["message"]["content"].strip()
+    recommended_jobs = response_job["choices"][0]["message"]["content"].strip()
+    career_suggestions = response_career["choices"][0]["message"]["content"].strip()
 
-    # Извлекаем "Примеры вакансий"
-    match_jobs = re.search(r"Примеры вакансий:(.*?)(Советы по развитию карьеры:|$)", feedback, re.DOTALL)
-    if match_jobs:
-        recommended_jobs = match_jobs.group(1).strip()
-
-    # Извлекаем "Советы по развитию карьеры"
-    match_career = re.search(r"Советы по развитию карьеры:(.*)", feedback, re.DOTALL)
-    if match_career:
-        career_suggestions = match_career.group(1).strip()
-
-    # Если какие-то части не были найдены, подставляем дефолтные значения
-    if not recommended_jobs:
-        recommended_jobs = "Не были получены рекомендации по вакансиям."
-    if not career_suggestions:
-        career_suggestions = "Не были получены советы по карьере."
-
-    # Заменить символы новой строки на пробелы для чистоты текста
+    # Заменяем символы новой строки на пробелы для чистоты текста
     feedback = feedback.replace("\n", " ")
-    improvement_tips = improvement_tips.replace("\n", " ")
     recommended_jobs = recommended_jobs.replace("\n", " ")
     career_suggestions = career_suggestions.replace("\n", " ")
 

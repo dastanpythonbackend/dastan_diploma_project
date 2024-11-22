@@ -25,7 +25,7 @@ urlpatterns = [
     path('resume_list/', views.ResumeListAPIView.as_view(), name='resume_list'),
 
     # Путь для получения детализированного анализа резюме
-    path('resume_detail/', views.ResumeDetailView.as_view(), name='resume_detail'),
+    path('resume_detail/<int:pk>/', views.ResumeDetailView.as_view(), name='resume_detail'),
 
     # Путь для анализа резюме
     path('resume_analyze/<int:resume_id>/', views.ResumeAnalysisAPIView.as_view(), name='resume_analyze'),
