@@ -31,9 +31,9 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
-    'user_auth_service',
-    'resume_analyzer',
-    'recommendation_engine',
+    'accounts',
+    'resumes',
+    'recommendations',
     'rest_framework',
     'drf_yasg',
     'rest_framework_simplejwt',

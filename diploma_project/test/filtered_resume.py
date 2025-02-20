@@ -1,12 +1,6 @@
-import requests  # Импортируем библиотеку для выполнения HTTP-запросов
-
-# URL для получения списка фильтрованного резюме
-response = requests.get("http://127.0.0.1:8000/resumes/filtered_resume/1/")
-
-# Проверяем статус ответа от сервера
+import requests
+response = requests.get('http://127.0.0.1:8000/resumes/filtered-resume/1/')
 if response.status_code == 200:
-    # Если запрос успешен (код 200), выводим сообщение и данные ответа в формате JSON
     print('Запрос успешно отправлен.', response.json())
 else:
-    # Если произошла ошибка (статус не 200), выводим сообщение об ошибке с кодом ответа и текстом
     print('Ошибка при отправке запроса:', response.status_code, response.text)
